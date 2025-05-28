@@ -1,25 +1,28 @@
-"""examples/basic.py
-Minimal Python demo for the Mixgarden SDK
+from mixgarden import MixgardenSDK
 
-Install:
-    python -m pip install mixgarden
+sdk = MixgardenSDK()
 
-Run:
-    python examples/basic.py
-"""
+models = sdk.get_models()
+print("Models:", models)
 
-import asyncio
-from mixgarden import Mixgarden
+chat = sdk.chat(
+    model=models[0]["id"] if models else "mistral-small",
+    content="hello mixgarden!",
+    pluginId="tone-pro",
+    pluginSettings={
+        "emotion-type": "neutral",
+        "emotion-intensity": 6,
+        "personality-type": "friendly",
+    },
+)
+print("Chat:", chat)
 
+plugins = sdk.get_plugins()
+print("Plugins:", plugins)
 
-async def main() -> None:
-    mg = Mixgarden(api_key="sk-your-key")  # replace with your real key
-    resp = await mg.chat(
-        "Rewrite this in pirate slang",
-        plugin_id="tonepro",
-    )
-    print(resp["text"])
+conversations = sdk.get_conversations()
+print("Conversations:", conversations)
 
-
-if __name__ == "__main__":
-    asyncio.run(main())
+if conversations:
+    conv = sdk.get_conversation(conversations[0]["id"])
+    print("First conversation:", conv)

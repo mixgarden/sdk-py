@@ -1,85 +1,47 @@
-# mixgarden
-
-Async Python client for the **Mixgarden** AI‑plugin platform.
-
-![PyPI](https://img.shields.io/pypi/v/mixgarden)
-![Status](https://img.shields.io/pypi/status/mixgarden)
-![License](https://img.shields.io/pypi/l/mixgarden)
-
----
-
-## Install
+# Mixgarden Python SDK
 
 ```bash
-python -m pip install mixgarden
+pip install mixgarden
 ```
 
-Supports Python 3.9 – 3.12.
-
----
-
-## Usage
+- Use `get_models()` to get a list of available models.
+- Use `get_plugins()` to get a list of available plugins.
+- Use `get_conversations()` to get a list of available conversations.
+- Use `get_conversation(id)` to get a specific conversation.
+- Use `chat(model, messages)` when you’re building a conversational UI, or want the platform to maintain context for you.
+- Use `get_completion(model, messages)` when you need a quick, stateless generation and want absolute control over the prompt and token usage. 
 
 ```python
-import asyncio
-from mixgarden import Mixgarden
+import os
+from mixgarden import MixgardenSDK
 
-async def main():
-    mg = Mixgarden(api_key="sk-…")
+sdk = MixgardenSDK(api_key=os.getenv("MIXGARDEN_API_KEY"))
 
-    resp = await mg.chat(
-        "Give me three business‑name ideas for a coffee shop",
-        plugin_id="creativity-plus"
-    )
-    print(resp["text"])
+# List available models
+models = sdk.get_models()
 
-asyncio.run(main())
+# Stateful chat (conversation is stored server-side)
+chat = sdk.chat(
+    model="gpt-4o-mini",
+    content="Hi there!",
+    conversationId="123",
+    pluginId="456",
+    pluginSettings={"foo": "bar"},
+)
+
+# Other helper calls
+plugins = sdk.get_plugins()
+conversations = sdk.get_conversations()
+conversation = sdk.get_conversation(conversations[0]["id"])
+
+# Stateless, one-shot completion (OpenAI-style)
+completion = sdk.get_completion(
+    model= models[0]["id"],
+    messages=[{"role": "user", "content": "Hi there!"}],
+    maxTokens=100,
+    temperature=0.7,
+)
+
+print(chat)
+print(completion)
 ```
-
-The client uses **httpx** and is fully async.
-
----
-
-## Client reference
-
-| Method | Description |
-| ------ | ----------- |
-| `Mixgarden(api_key, base_url=None)` | create a client |
-| `await chat(prompt, plugin_id, model=None, **params)` | run a plugin |
-| `await list_plugins()` | list visible plugins |
-| `await get_plugin(plugin_id)` | fetch plugin metadata |
-
----
-
-## Examples
-
-* `examples/basic.py` – one‑off chat  
-* `examples/fastapi_app.py` – integrate inside a FastAPI route
-
----
-
-## Development
-
-```bash
-git clone https://github.com/mixgarden/sdk-py.git
-cd sdk-py
-python -m pip install -e ".[dev]"
-pytest
-```
-
-Run `ruff` and `black` before opening a PR.
-
----
-
-## Publishing (maintainers)
-
-```bash
-python -m build
-python -m twine upload dist/*
-```
-
----
-
-## License
-
-MIT

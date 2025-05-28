@@ -1,85 +1,49 @@
-"""mixgarden/client.py
-Async Python client for the Mixgarden plugin API.
-Usage:
-    from mixgarden import Mixgarden
-    mg = Mixgarden(api_key="sk-...")
-    data = await mg.chat("Hello", plugin_id="tonepro")
-"""
-
-from __future__ import annotations
-
-import httpx
+import os
 from typing import Any, Dict, Optional
 
+import httpx
 
-class Mixgarden:
-    """Minimal async SDK client."""
 
-    __slots__ = ("_key", "_base_url", "client")
+class MixgardenSDK:
+    """Very small Python wrapper around the Mixgarden REST API."""
 
-    def __init__(self, api_key: str, base_url: str | None = None) -> None:
-        self._key = api_key
-        self._base_url = base_url or "https://api.mixgarden.ai/v1"
-        self.client = httpx.AsyncClient(
-            base_url=self._base_url,
-            headers={"Authorization": f"Bearer {self._key}"},
-            timeout=20,
+    def __init__(self, api_key: Optional[str] = None, base_url: str = "https://api.mixgarden.ai/api/v1") -> None:
+        self.api_key = api_key or os.getenv("MIXGARDEN_API_KEY")
+        if not self.api_key:
+            raise ValueError("Mixgarden API key missing (set MIXGARDEN_API_KEY or pass api_key).")
+        self.base_url = base_url.rstrip("/")
+        self._client = httpx.Client(
+            base_url=self.base_url,
+            headers={ "Authorization": f"MixgardenAPIKey {self.api_key}" },
+            timeout=30.0,
         )
 
-    # --------------------------------------------------------------------- #
-    # public API methods
-    # --------------------------------------------------------------------- #
+    # ---- internal -------------------------------------------------------
+    def _request(self, method: str, path: str, *, json: Optional[dict] = None, params: Optional[dict] = None):
+        response = self._client.request(method.upper(), path, json=json, params=params)
+        response.raise_for_status()
+        if response.status_code == 204:
+            return None
+        return response.json()
 
-    async def chat(
-        self,
-        prompt: str,
-        /,
-        *,
-        plugin_id: str,
-        model: str | None = None,
-        params: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
-        """Run *prompt* through a plugin and return the JSON response."""
-        payload: Dict[str, Any] = {
-            "prompt": prompt,
-            "pluginId": plugin_id,
-        }
-        if model:
-            payload["model"] = model
-        if params:
-            payload["params"] = params
+    # ---- public helpers -------------------------------------------------
+    def get_models(self):
+        return self._request("GET", "/models")
 
-        r = await self.client.post("/chat", json=payload)
-        r.raise_for_status()
-        return r.json()
+    def chat(self, **params):
+        return self._request("POST", "/chat", json=params)
 
-    async def list_plugins(self) -> Dict[str, Any]:
-        """Return all plugins visible to the current API key."""
-        r = await self.client.get("/plugins")
-        r.raise_for_status()
-        return r.json()
+    def get_completion(self, **params):
+        return self._request("POST", "/chat/completions", json=params)
 
-    async def get_plugin(self, plugin_id: str) -> Dict[str, Any]:
-        """Fetch metadata for a single plugin."""
-        r = await self.client.get(f"/plugins/{plugin_id}")
-        r.raise_for_status()
-        return r.json()
+    def get_plugins(self):
+        return self._request("GET", "/plugins")
 
-    # --------------------------------------------------------------------- #
-    # convenience helpers
-    # --------------------------------------------------------------------- #
+    def get_conversations(self, **params):
+        return self._request("GET", "/conversations", params=params)
 
-    async def close(self) -> None:
-        """Close the underlying HTTP connection pool."""
-        await self.client.aclose()
+    def get_conversation(self, conversation_id: str):
+        return self._request("GET", f"/conversations/{conversation_id}")
 
-    # ------------------------------------------------------ context manager
-
-    async def __aenter__(self) -> "Mixgarden":
-        return self
-
-    async def __aexit__(self, exc_type, exc, tb) -> None:  # type: ignore[override]
-        await self.close()
-
-
-__all__ = ["Mixgarden"]
+    def close(self):
+        self._client.close()

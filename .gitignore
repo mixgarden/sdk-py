@@ -1,5 +1,4 @@
-publish.md
-node_modules/
-__pycache__
-.venv
+__pycache__/
+*.py[cod]
 .env
+publish.md
