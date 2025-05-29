@@ -4,12 +4,13 @@
 pip install mixgarden
 ```
 
-- Use `get_models()` to get a list of available models.
+- Use `get_models()` to get a list of available models and providers.
 - Use `get_plugins()` to get a list of available plugins.
 - Use `get_conversations()` to get a list of available conversations.
 - Use `get_conversation(id)` to get a specific conversation.
 - Use `chat(model, messages)` when you’re building a conversational UI, or want the platform to maintain context for you.
-- Use `get_completion(model, messages)` when you need a quick, stateless generation and want absolute control over the prompt and token usage. 
+- Use `get_mg_completion(model, content)` when you need a one-off, stateless generation enhanced by Mixgarden plugins.
+- Use `get_completion(model, messages)` when you need a one-off, stateless generation directly from LLM (Raw LLM Output). 
 
 ```python
 import os
@@ -22,7 +23,7 @@ models = sdk.get_models()
 
 # Stateful chat (conversation is stored server-side)
 chat = sdk.chat(
-    model="gpt-4o-mini",
+    model="openai/gpt-4o-mini",
     content="Hello mixgarden!",
     pluginId="tone-pro",
     pluginSettings={
@@ -37,9 +38,23 @@ plugins = sdk.get_plugins()
 conversations = sdk.get_conversations()
 conversation = sdk.get_conversation(conversations[0]["id"])
 
-# Stateless, one-shot completion (OpenAI-style)
+# One-shot completion (Mixgarden Enhanced)
+completion = sdk.get_mg_completion(
+    model="openai/gpt-4o-mini",
+    content="hello mixgarden!",
+    maxTokens=100,
+    temperature=0.7,
+    pluginId="tone-pro",
+    pluginSettings={
+        "emotion-type": "neutral",
+        "emotion-intensity": 6,
+        "personality-type": "friendly"
+    }
+)
+
+# One-shot completion (Raw LLM Output)
 completion = sdk.get_completion(
-    model= models[0]["id"],
+    model= "openai/gpt-4o-mini",
     messages=[{"role": "user", "content": "Hi there!"}],
     maxTokens=100,
     temperature=0.7,

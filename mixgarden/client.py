@@ -36,6 +36,9 @@ class MixgardenSDK:
     def get_completion(self, **params):
         return self._request("POST", "/chat/completions", json=params)
 
+    def get_mg_completion(self, **params):
+        return self._request("POST", "/mg-completion", json=params)
+
     def get_plugins(self):
         return self._request("GET", "/plugins")
 
