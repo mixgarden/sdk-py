@@ -14,7 +14,7 @@ class MixgardenSDK:
         self.base_url = base_url.rstrip("/")
         self._client = httpx.Client(
             base_url=self.base_url,
-            headers={ "Authorization": f"MixgardenAPIKey {self.api_key}" },
+            headers={ "Authorization": f"Bearer {self.api_key}" },
             timeout=30.0,
         )
 

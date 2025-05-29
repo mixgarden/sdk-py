@@ -23,10 +23,13 @@ models = sdk.get_models()
 # Stateful chat (conversation is stored server-side)
 chat = sdk.chat(
     model="gpt-4o-mini",
-    content="Hi there!",
-    conversationId="123",
-    pluginId="456",
-    pluginSettings={"foo": "bar"},
+    content="Hello mixgarden!",
+    pluginId="tone-pro",
+    pluginSettings={
+        "emotion-type": "neutral",
+        "emotion-intensity": 6,
+        "personality-type": "friendly",
+    },
 )
 
 # Other helper calls
