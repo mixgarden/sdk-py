@@ -31,7 +31,38 @@ class MixgardenSDK:
         return self._request("GET", "/models")
 
     def chat(self, **params):
-        return self._request("POST", "/chat", json=params)
+        conversation_id = params.pop("conversationId", None)
+        if conversation_id:
+            # Add message to existing conversation
+            self._request(
+                "POST",
+                f"/conversations/{conversation_id}/messages",
+                json=params
+            )
+            # Return updated conversation (with messages)
+            return self.get_conversation(conversation_id)
+        else:
+            # Create a new conversation
+            convo_res = self._request(
+                "POST",
+                "/conversations",
+                json=params
+            )
+            conversation_id = convo_res["id"]
+            # Add first message
+            message_params = {
+                "model": params.get("model"),
+                "pluginId": params.get("pluginId"),
+                "pluginSettings": params.get("pluginSettings"),
+                "content": params.get("content"),
+            }
+            self._request(
+                "POST",
+                f"/conversations/{conversation_id}/messages",
+                json=message_params
+            )
+            # Return updated conversation (with messages)
+            return self.get_conversation(conversation_id)
 
     def get_completion(self, **params):
         return self._request("POST", "/chat/completions", json=params)

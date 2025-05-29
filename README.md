@@ -24,6 +24,8 @@ models = sdk.get_models()
 # Stateful chat (conversation is stored server-side)
 chat = sdk.chat(
     model="openai/gpt-4o-mini",
+    # Optionally add conversationId to add to an existing conversation
+    # conversationId: "your-convo-id",
     content="Hello mixgarden!",
     pluginId="tone-pro",
     pluginSettings={
