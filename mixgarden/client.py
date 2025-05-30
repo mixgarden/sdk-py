@@ -30,39 +30,49 @@ class MixgardenSDK:
     def get_models(self):
         return self._request("GET", "/models")
 
-    def chat(self, **params):
-        conversation_id = params.pop("conversationId", None)
-        if conversation_id:
-            # Add message to existing conversation
-            self._request(
-                "POST",
-                f"/conversations/{conversation_id}/messages",
-                json=params
-            )
-            # Return updated conversation (with messages)
-            return self.get_conversation(conversation_id)
+    def chat(self, content, model, conversation_id=None, plugin_id=None, plugin_settings=None,
+            wait_for_response=True, poll_interval=1.5, timeout=30):
+        # 1. Ensure conversation exists
+        if not conversation_id:
+            conv_res = self._request("POST", "/conversations", json={
+                "title": "New Conversation",
+                "model": model
+            })
+            conversation_id = conv_res.get("id")
+            if not conversation_id:
+                raise RuntimeError("Failed to create conversation")
+
+        # 2. Add user message
+        self._request("POST", f"/conversations/{conversation_id}/messages", json={
+            "role": "user",
+            "content": content,
+            "pluginId": plugin_id,
+            "pluginSettings": plugin_settings
+        })
+
+        # 3. Start AI/plugin job
+        gen_res = self._request("POST", f"/conversations/{conversation_id}/generate", json={
+            "model": model,
+            "pluginId": plugin_id,
+            "pluginSettings": plugin_settings
+        })
+        job_id = gen_res.get("jobId")
+        if not job_id:
+            raise RuntimeError("No jobId returned from backend")
+
+        # 4. Optionally poll for result
+        if wait_for_response:
+            start = time.time()
+            while time.time() - start < timeout:
+                result = self._request("GET", f"/conversations/generate/status/{job_id}")
+                if result and result.get("status") == "completed" and result.get("result"):
+                    return result["result"]
+                if result and result.get("status") == "failed":
+                    raise RuntimeError(result.get("error", "AI/plugin job failed"))
+                time.sleep(poll_interval)
+            raise TimeoutError("Timed out waiting for AI/plugin response")
         else:
-            # Create a new conversation
-            convo_res = self._request(
-                "POST",
-                "/conversations",
-                json=params
-            )
-            conversation_id = convo_res["id"]
-            # Add first message
-            message_params = {
-                "model": params.get("model"),
-                "pluginId": params.get("pluginId"),
-                "pluginSettings": params.get("pluginSettings"),
-                "content": params.get("content"),
-            }
-            self._request(
-                "POST",
-                f"/conversations/{conversation_id}/messages",
-                json=message_params
-            )
-            # Return updated conversation (with messages)
-            return self.get_conversation(conversation_id)
+            return {"jobId": job_id}
 
     def get_completion(self, **params):
         return self._request("POST", "/chat/completions", json=params)
