@@ -80,8 +80,44 @@ class MixgardenSDK:
     def get_mg_completion(self, **params):
         return self._request("POST", "/mg-completion", json=params)
 
-    def get_plugins(self):
-        return self._request("GET", "/plugins")
+    def get_plugins(self, page: Optional[int] = 1, limit: Optional[int] = 10) -> Dict[str, Any]:
+        """
+        Fetches a single page of plugins.
+        """
+        return self._request("GET", "/plugins", params={"page": page, "limit": limit})
+
+    def get_all_plugins(self, batch_size: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetches all plugins by handling pagination.
+        """
+        all_plugins: List[Dict[str, Any]] = []
+        current_page = 1
+        total_plugins = 0
+        fetched_plugins = 0
+
+        while True:
+            response = self.get_plugins(page=current_page, limit=batch_size)
+            if response and "plugins" in response:
+                plugins_on_page = response["plugins"]
+                all_plugins.extend(plugins_on_page)
+                fetched_plugins = len(all_plugins)
+
+                if current_page == 1: # Set total only on first successful fetch
+                    total_plugins = response.get("total", 0)
+                
+                if not plugins_on_page or fetched_plugins >= total_plugins: # Break if no more plugins on page or all fetched
+                    break
+            else:
+                # Should not happen if backend is consistent
+                print("Warning: Failed to fetch a page of plugins or received invalid response.")
+                break 
+            
+            current_page += 1
+            if total_plugins == 0 and current_page > 1 : # Safety break if total was 0 but we somehow continued
+                 break
+
+
+        return all_plugins
 
     def get_conversations(self, **params):
         return self._request("GET", "/conversations", params=params)
